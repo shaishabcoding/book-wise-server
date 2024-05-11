@@ -33,6 +33,10 @@ async function run() {
     const booksDB = client.db("bookDB");
     const booksCollection = booksDB.collection("books");
 
+    app.get("/books", async (req, res) => {
+      const result = await booksCollection.find().toArray();
+      res.send(result);
+    });
     app.post("/books/new", async (req, res) => {
       const newBook = req.body;
       const result = await booksCollection.insertOne(newBook);
