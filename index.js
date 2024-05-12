@@ -58,7 +58,7 @@ async function run() {
     const booksCollection = booksDB.collection("books");
     const borrowsCollection = booksDB.collection("borrows");
 
-    app.get("/books", async (req, res) => {
+    app.get("/books", verifyToken, async (req, res) => {
       const result = await booksCollection.find().toArray();
       res.send(result);
     });
@@ -72,7 +72,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/books/categories/:category", async (req, res) => {
+    app.get("/books/categories/:category", verifyToken, async (req, res) => {
       const { category } = req.params;
       const query = { category };
       const cursor = booksCollection.find(query);
@@ -80,7 +80,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/book/:id", async (req, res) => {
+    app.get("/book/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.findOne(query);
