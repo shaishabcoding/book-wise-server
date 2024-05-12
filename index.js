@@ -50,6 +50,17 @@ async function run() {
       const result = await booksCollection.insertOne(newBook);
       res.send(result);
     });
+
+    app.put("/book/:id/borrow", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const result = await booksCollection.updateOne(query, {
+        $inc: { quantity: -1 },
+      });
+
+      res.send(result);
+    });
   } finally {
     // await client.close();
   }
