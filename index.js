@@ -13,7 +13,11 @@ const port = process.env.PORT || 5000;
 app.use(express.json());
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      // "http://localhost:5173",
+      "https://book-wise-316.web.app",
+      "https://book-wise-316.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -47,11 +51,11 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     //commit this line when deploy on vercel -- start
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.connect();
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
     //commit this line when deploy on vercel -- end
 
     const booksDB = client.db("bookDB");
