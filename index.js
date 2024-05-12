@@ -167,6 +167,14 @@ async function run() {
             const bookDetails = await booksCollection.findOne({
               _id: new ObjectId(bookId),
             });
+
+            // If book details not found, remove the borrowed book
+            if (!bookDetails) {
+              // You may want to handle this case, e.g., logging or notifying the user
+              console.log(`Book with ID ${bookId} not found.`);
+              return null;
+            }
+
             return {
               ...borrowedBook,
               ...bookDetails,
@@ -174,7 +182,12 @@ async function run() {
           })
         );
 
-        res.send(borrowedBooksDetails);
+        // Filter out null values (where book details were not found)
+        const filteredBorrowedBooksDetails = borrowedBooksDetails.filter(
+          (book) => book !== null
+        );
+
+        res.send(filteredBorrowedBooksDetails);
       } catch (error) {
         console.error(error);
         res.status(500).send("Error fetching borrowed books.");
