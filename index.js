@@ -63,7 +63,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/books/:id", async (req, res) => {
+    app.get("/book/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.findOne(query);
@@ -88,7 +88,7 @@ async function run() {
       });
 
       // If the user has borrowed less than 3 books, allow borrowing
-      if (userBorrowedBooksCount < 3) {
+      if (userBorrowedBooksCount < 30) {
         try {
           // Begin a session
           const session = client.startSession();
@@ -107,8 +107,6 @@ async function run() {
             returnDate,
             name,
           };
-
-          console.log(borrowRecord);
 
           // Insert the borrowing record
           await borrowsCollection.insertOne(borrowRecord, { session });
@@ -133,6 +131,21 @@ async function run() {
           .send("You have reached the maximum limit of 3 borrowed books.");
       }
     });
+
+    app.get("/books/borrowed", verifyToken, async (req, res) => {
+      const { email } = req.user;
+      try {
+        // Find all borrowed books for the user
+        const borrowedBooks = await borrowsCollection
+          .find({ borrowerEmail: email })
+          .toArray();
+
+        res.send(borrowedBooks);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send("Error fetching borrowed books.");
+      }
+    });
   } finally {
     // await client.close();
   }
@@ -153,16 +166,13 @@ const cookieOptions = {
 //creating Token
 app.post("/jwt", async (req, res) => {
   const { email } = req.body;
-  console.log("user for token", email);
   const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);
-  console.log(token);
   res.cookie("token", token, cookieOptions).send({ success: true });
 });
 
 //clearing Token
 app.post("/logout", async (req, res) => {
   const { email } = req.body;
-  console.log("logging out", email);
   res
     .clearCookie("token", { ...cookieOptions, maxAge: 0 })
     .send({ success: true });
