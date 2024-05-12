@@ -63,6 +63,15 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/books/popular", async (req, res) => {
+      const result = await booksCollection
+        .find()
+        .sort({ rating: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
     app.get("/book/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -163,17 +172,13 @@ async function run() {
         // Fetch book details for each borrowed book
         const borrowedBooksDetails = await Promise.all(
           borrowedBooks.map(async (borrowedBook) => {
-            const bookId = borrowedBook.bookId;
+            const { bookId } = borrowedBook;
             const bookDetails = await booksCollection.findOne({
               _id: new ObjectId(bookId),
             });
 
             // If book details not found, remove the borrowed book
-            if (!bookDetails) {
-              // You may want to handle this case, e.g., logging or notifying the user
-              console.log(`Book with ID ${bookId} not found.`);
-              return null;
-            }
+            if (!bookDetails) return null;
 
             return {
               ...borrowedBook,
