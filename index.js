@@ -78,8 +78,11 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/books/new", async (req, res) => {
+    app.post("/books/new", verifyToken, async (req, res) => {
       const newBook = req.body;
+      if (req.user.email !== newBook.email) {
+        return res.status(403).send("forbidden");
+      }
       const result = await booksCollection.insertOne(newBook);
       res.send(result);
     });
@@ -107,7 +110,7 @@ async function run() {
           borrowerEmail: email,
         });
 
-        if (userBorrowedBooksCount >= 30) {
+        if (userBorrowedBooksCount > 2) {
           return res
             .status(403)
             .send("You have reached the maximum limit of borrowed books.");
@@ -178,8 +181,11 @@ async function run() {
       }
     });
 
-    app.put("/book/:id/edit", async (req, res) => {
+    app.put("/book/:id/edit", verifyToken, async (req, res) => {
       const book = req.body;
+      if (req.user.email !== book.email) {
+        return res.status(403).send("forbidden");
+      }
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -216,8 +222,11 @@ async function run() {
       }
     });
 
-    app.delete("/book/:id", async (req, res) => {
-      const { id } = req.params;
+    app.delete("/book/:email/:id", verifyToken, async (req, res) => {
+      const { id, email } = req.params;
+      if (req.user.email !== email) {
+        return res.status(403).send("forbidden");
+      }
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.deleteOne(query);
       res.send(result);
@@ -248,7 +257,6 @@ app.post("/jwt", async (req, res) => {
 
 //clearing Token
 app.post("/logout", async (req, res) => {
-  const { email } = req.body;
   res
     .clearCookie("token", { ...cookieOptions, maxAge: 0 })
     .send({ success: true });
