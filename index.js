@@ -137,13 +137,49 @@ async function run() {
       try {
         // Find all borrowed books for the user
         const borrowedBooks = await borrowsCollection
-          .find({ borrowerEmail: email })
+          .find({ borrowerEmail: email }, { projection: { _id: 0 } })
           .toArray();
 
-        res.send(borrowedBooks);
+        // Fetch book details for each borrowed book
+        const borrowedBooksDetails = await Promise.all(
+          borrowedBooks.map(async (borrowedBook) => {
+            const bookId = borrowedBook.bookId;
+            const bookDetails = await booksCollection.findOne({
+              _id: new ObjectId(bookId),
+            });
+            return {
+              ...borrowedBook,
+              ...bookDetails,
+            };
+          })
+        );
+
+        res.send(borrowedBooksDetails);
       } catch (error) {
         console.error(error);
         res.status(500).send("Error fetching borrowed books.");
+      }
+    });
+
+    app.put("/book/:id/return", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      try {
+        // Increase the book quantity by 1
+        await booksCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $inc: { quantity: 1 } }
+        );
+
+        // Remove the borrowing record from the borrowsCollection
+        await borrowsCollection.deleteOne({
+          bookId: id,
+          borrowerEmail: req.user.email,
+        });
+
+        res.status(200).send({ success: true });
+      } catch (error) {
+        console.error("Error returning book:", error);
+        res.status(500).send("Error returning book.");
       }
     });
   } finally {
