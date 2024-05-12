@@ -178,6 +178,22 @@ async function run() {
       }
     });
 
+    app.put("/book/:id/edit", async (req, res) => {
+      const book = req.body;
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedBook = {
+        $set: book,
+      };
+      const result = await booksCollection.updateOne(
+        query,
+        updatedBook,
+        options
+      );
+      res.send(result);
+    });
+
     app.put("/book/:id/return", verifyToken, async (req, res) => {
       const id = req.params.id;
       try {
@@ -198,6 +214,13 @@ async function run() {
         console.error("Error returning book:", error);
         res.status(500).send("Error returning book.");
       }
+    });
+
+    app.delete("/book/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const result = await booksCollection.deleteOne(query);
+      res.send(result);
     });
   } finally {
     // await client.close();
