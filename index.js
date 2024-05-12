@@ -70,6 +70,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/books/my", verifyToken, async (req, res) => {
+      const { email } = req.user;
+      const query = { email };
+      const cursor = booksCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     app.post("/books/new", async (req, res) => {
       const newBook = req.body;
       const result = await booksCollection.insertOne(newBook);
@@ -83,52 +91,61 @@ async function run() {
       const { email } = req.user;
       const { returnDate, name } = req.body;
 
-      const userBorrowedBooksCount = await borrowsCollection.countDocuments({
-        borrowerEmail: email,
-      });
+      try {
+        // Check if the user has already borrowed the book
+        const hasBorrowedBook = await borrowsCollection.findOne({
+          bookId: id,
+          borrowerEmail: email,
+        });
 
-      // If the user has borrowed less than 3 books, allow borrowing
-      if (userBorrowedBooksCount < 30) {
-        try {
-          // Begin a session
-          const session = client.startSession();
-          session.startTransaction();
-
-          // Update the book quantity
-          const result = await booksCollection.updateOne(query, {
-            $inc: { quantity: -1 },
-          });
-
-          // Create a borrowing record
-          const borrowRecord = {
-            bookId: id,
-            borrowerEmail: email,
-            borrowDate: moment().format("MM/DD/YYYY"),
-            returnDate,
-            name,
-          };
-
-          // Insert the borrowing record
-          await borrowsCollection.insertOne(borrowRecord, { session });
-
-          // Commit the transaction
-          await session.commitTransaction();
-          session.endSession();
-
-          res.send(result);
-        } catch (error) {
-          console.log(error);
-          // If an error occurs, abort the transaction
-          await session.abortTransaction();
-          session.endSession();
-
-          console.error(error);
-          res.status(500).send("Error borrowing book.");
+        if (hasBorrowedBook) {
+          return res.status(400).send("You have already borrowed this book.");
         }
-      } else {
-        res
-          .status(403)
-          .send("You have reached the maximum limit of 3 borrowed books.");
+
+        // Check if the user has reached the maximum limit of borrowed books
+        const userBorrowedBooksCount = await borrowsCollection.countDocuments({
+          borrowerEmail: email,
+        });
+
+        if (userBorrowedBooksCount >= 30) {
+          return res
+            .status(403)
+            .send("You have reached the maximum limit of borrowed books.");
+        }
+
+        // Begin a session
+        const session = client.startSession();
+        session.startTransaction();
+
+        // Update the book quantity
+        const result = await booksCollection.updateOne(query, {
+          $inc: { quantity: -1 },
+        });
+
+        // Create a borrowing record
+        const borrowRecord = {
+          bookId: id,
+          borrowerEmail: email,
+          borrowDate: moment().format("MM/DD/YYYY"),
+          returnDate,
+          name,
+        };
+
+        // Insert the borrowing record
+        await borrowsCollection.insertOne(borrowRecord, { session });
+
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        // If an error occurs, abort the transaction
+        await session.abortTransaction();
+        session.endSession();
+
+        res.status(500).send("Error borrowing book.");
       }
     });
 
