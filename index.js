@@ -72,6 +72,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/books/categories/:category", async (req, res) => {
+      const { category } = req.params;
+      const query = { category };
+      const cursor = booksCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     app.get("/book/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
