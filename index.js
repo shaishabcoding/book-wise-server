@@ -51,11 +51,11 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     //commit this line when deploy on vercel -- start
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.connect();
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
     //commit this line when deploy on vercel -- end
 
     const booksDB = client.db("bookDB");
