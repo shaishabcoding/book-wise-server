@@ -51,11 +51,11 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     //commit this line when deploy on vercel -- start
-    // await client.connect();
-    // await client.db("admin").command({ ping: 1 });
-    // console.log(
-    //   "Pinged your deployment. You successfully connected to MongoDB!"
-    // );
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
     //commit this line when deploy on vercel -- end
 
     const booksDB = client.db("bookDB");
@@ -63,8 +63,42 @@ async function run() {
     const borrowsCollection = booksDB.collection("borrows");
 
     app.get("/books", verifyToken, async (req, res) => {
-      const result = await booksCollection.find().toArray();
+      const { query } = req.query;
+      let result = [];
+      if (query) {
+        result = await booksCollection
+          .find({
+            $or: [
+              { title: { $regex: query, $options: "i" } },
+              { description: { $regex: query, $options: "i" } },
+              { long_description: { $regex: query, $options: "i" } },
+            ],
+          })
+          .toArray();
+      } else {
+        result = await booksCollection.find().toArray();
+      }
       res.send(result);
+    });
+
+    app.get("/books/suggestions", async (req, res) => {
+      try {
+        const { query } = req.query;
+        const suggestions = await booksCollection
+          .find(
+            {
+              $or: [{ title: { $regex: query, $options: "i" } }],
+            },
+            {
+              limit: 10,
+            }
+          )
+          .toArray();
+
+        res.send(suggestions);
+      } catch (err) {
+        res.status(500).send({ err });
+      }
     });
 
     app.get("/books/popular", async (req, res) => {
